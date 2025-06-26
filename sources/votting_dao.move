@@ -1,6 +1,10 @@
 module 0x0::votting_dao;
 
-public enum Rank has store{
+const EXP_ERR: u64 = 1;
+const NOT_ELIGIBLE: u64 = 2;
+const USER_RANKING_ERR:u64 = 3;
+
+public enum Rank has drop, store{
     User1,
     User2,
     User3
@@ -16,11 +20,14 @@ public struct DoaMemeber has key, store {
     name: std::string::String,
     rank: Rank,
     doa_address: address,
+    age: u64
 }
 
 public struct Dao has key {
     id: UID,
-    admin: address,  
+    name: std::string::String,
+    decription: std::string::String,
+    creator: address,  
 }
 
 public struct VoteEvent has copy, drop {
@@ -38,50 +45,87 @@ public struct Proposal has key, store {
     total: vector<address>
 }
 
-fun init(_otw: VOTTING_DAO, ctx: &mut TxContext){
 
+fun init(_otw: VOTTING_DAO, ctx: &mut TxContext){
+    let description = b"A Decentralized Autonomous Community for Learning, Building and Innovation on Sui Network from Africa.";
     let new_dao = Dao { 
-        id: object::new(ctx), 
-        admin:  ctx.sender()
+        id: object::new(ctx),
+        name: std::string::utf8(b"Sui Hub Africa DAO"),
+        decription: std::string::utf8(description),
+        creator:  ctx.sender()
         };
-    transfer::transfer(new_dao, ctx.sender())
+    // let rank1 = Rank
+    transfer::share_object(new_dao)
+    // transfer::transfer(new_dao, ctx.sender())
 }
 
-public fun join_dao(name: std::string::String, rank: Rank, dao: address, recipient: address, ctx: &mut TxContext){
+public entry fun join_dao( dao: address, name: std::string::String, ctx: &mut TxContext){
     let create_membership = DoaMemeber {
         id: object::new(ctx),
         name,
-        rank,
+        rank: Rank::User1,
         doa_address: dao,
+        age: ctx.epoch()
     };
 
-    transfer::public_transfer(create_membership, recipient)
+    transfer::public_transfer(create_membership, ctx.sender())
 }
 
-public fun votting(vote_option: VoteOption, proposal: &mut Proposal, votter_addr: address, ctx: &mut TxContext){
+public entry fun upgrade_to_user2(membership: &mut DoaMemeber, ctx: &mut TxContext){
+    // check for upgrade eligibilities
+    // check if the user is lower
+    assert!(&membership.rank == Rank::User1, USER_RANKING_ERR);
+    let _2month = ctx.epoch() * 60;
+    // check if the user is up to age
+    assert!(membership.age >= _2month, 0);
+    membership.rank = Rank::User2;
+}
+
+public entry fun upgrade_to_user3(membership: &mut DoaMemeber, ctx: &mut TxContext){
+    // check for upgrade eligibilities
+    // check if the user is lower
+    assert!(&membership.rank == Rank::User2, USER_RANKING_ERR);
+    let _5month = ctx.epoch() * 150;
+    // check if the user is up to age
+    assert!(membership.age >= _5month, 0);
+    membership.rank = Rank::User3;
+}
+
+public entry fun votting(
+     vote_for: bool, 
+     proposal: &mut Proposal, 
+     daoMember: &DoaMemeber, 
+     ctx: &mut TxContext
+     ){
     // check if the period has expired
-    assert!(ctx.epoch() < proposal.exp, 1);
+    assert!(ctx.epoch() < proposal.exp, EXP_ERR);
     // check the votter has votted
     let mut i = 0;
     while (i < vector::length(&proposal.total))
     {
-        if (proposal.total[i] == votter_addr) {
+        if (proposal.total[i] == ctx.sender()) {
             abort 2
         };
         i = i + 1;
     };
 
-    if (vote_option == VoteOption::VoteFor){
+    let _user1_rank = &Rank::User1;
+    let _user2_rank = &Rank::User2;
+    assert!(_user1_rank == &daoMember.rank || &daoMember.rank == _user2_rank, 5);
+
+    if (vote_for){
         proposal.support = proposal.support + 1;
-        vector::push_back(&mut proposal.total, votter_addr);
-    } else if (vote_option == VoteOption::VoteAgainst) {
+        vector::push_back(&mut proposal.total, ctx.sender());
+    } else {
         proposal.not_supporting = proposal.not_supporting + 1;
-        vector::push_back(&mut proposal.total, votter_addr)
+        vector::push_back(&mut proposal.total, ctx.sender())
     };
 
     sui::event::emit(VoteEvent{
         msg: std::string::utf8(b"votted successfully")
-    })
+    });
+
+
 }
 
 // public fun end_vote(proposal: &mut Proposal, member: &DoaMemeber, ctx: &mut TxContext)
@@ -91,8 +135,11 @@ public fun votting(vote_option: VoteOption, proposal: &mut Proposal, votter_addr
 //     proposal.exp = ctx.epoch();
 // }
 
-public fun create_proposal(ctx: &mut TxContext, dao_id: address, member: &DoaMemeber, recipient: address) {
+public entry fun create_proposal( dao_id: address, member: &DoaMemeber, recipient: address, ctx: &mut TxContext) {
+    // membership check
     assert!(member.doa_address == dao_id, 0);
+    // eligibility check
+    assert!(&member.rank == Rank::User1 || &member.rank == Rank::User2, NOT_ELIGIBLE);
     let new_proposal = Proposal {
         id: object::new(ctx),
         dao: dao_id,
