@@ -16,3 +16,4 @@ fun test_sui_hub_votting_app_fail() {
     abort ENotImplemented
 }
 */
+

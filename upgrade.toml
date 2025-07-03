@@ -1,0 +1,5 @@
+[upgrade]
+upgrade_cap = "0x37ed919587204d273e4f1f0828a16b3cf69da78b043b986d1c7af5b024d2bab2"
+package_id = "0x437f57575e57ba293d33ecfb136df440d2400ed36d9fed508dae8ce70267f57f"
+environment = "testnet"
+created_at = "2025-07-02T16:57:47.244Z"

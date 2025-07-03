@@ -1,5 +1,7 @@
 module 0x0::votting_dao;
 
+use sui::dynamic_field as df;
+
 const EXP_ERR: u64 = 1;
 const NOT_ELIGIBLE: u64 = 2;
 const USER_RANKING_ERR:u64 = 3;
@@ -20,14 +22,19 @@ public struct DoaMemeber has key, store {
     name: std::string::String,
     rank: Rank,
     doa_address: address,
-    age: u64
+    age: u64,
+	description: std::string::String,
+	url: sui::url::Url,
+    owner: address
+	// : sui::url::Url,
 }
 
 public struct Dao has key {
     id: UID,
     name: std::string::String,
     decription: std::string::String,
-    creator: address,  
+    members: vector<address>,
+    creator: address,
 }
 
 public struct VoteEvent has copy, drop {
@@ -39,11 +46,15 @@ public struct VOTTING_DAO has drop{}
 public struct Proposal has key, store {
     id: UID,
     dao: address,
+    name: std::string::String,
+    description: std::string::String,
     support: u64,
     not_supporting: u64,
     exp: u64,
     total: vector<address>
 }
+
+// todo creating a mapish type to allow querying map keys
 
 
 fun init(_otw: VOTTING_DAO, ctx: &mut TxContext){
@@ -52,6 +63,7 @@ fun init(_otw: VOTTING_DAO, ctx: &mut TxContext){
         id: object::new(ctx),
         name: std::string::utf8(b"Sui Hub Africa DAO"),
         decription: std::string::utf8(description),
+        members: vector::empty<address>(),
         creator:  ctx.sender()
         };
     // let rank1 = Rank
@@ -59,16 +71,34 @@ fun init(_otw: VOTTING_DAO, ctx: &mut TxContext){
     // transfer::transfer(new_dao, ctx.sender())
 }
 
-public entry fun join_dao( dao: address, name: std::string::String, ctx: &mut TxContext){
+public entry fun join_dao( dao: &Dao, name: std::string::String, description: std::string::String, image: std::ascii::String, ctx: &mut TxContext){
+    assert!(!vector::contains(&dao.members, &ctx.sender()), 1);
     let create_membership = DoaMemeber {
         id: object::new(ctx),
         name,
+        description,
+        url: sui::url::new_unsafe(image),
         rank: Rank::User1,
-        doa_address: dao,
+        doa_address: dao.id.to_address(),
+        owner: ctx.sender(),
         age: ctx.epoch()
     };
-
     transfer::public_transfer(create_membership, ctx.sender())
+}
+
+public entry fun update_membership_profile(
+    doa: &mut Dao, 
+    ctx: &mut TxContext
+){
+    
+    // assert!(vector::contains(&doa.members, &ctx.sender()), 2);
+    // assert!(vector::length(&args) <= 3, 3);
+    // get args name
+    /* iterate through to get the nams of args 
+    */
+
+
+
 }
 
 public entry fun upgrade_to_user2(membership: &mut DoaMemeber, ctx: &mut TxContext){
@@ -98,7 +128,7 @@ public entry fun votting(
      ctx: &mut TxContext
      ){
     // check if the period has expired
-    assert!(ctx.epoch() < proposal.exp, EXP_ERR);
+    assert!(ctx.epoch() > proposal.exp, EXP_ERR);
     // check the votter has votted
     let mut i = 0;
     while (i < vector::length(&proposal.total))
@@ -135,7 +165,7 @@ public entry fun votting(
 //     proposal.exp = ctx.epoch();
 // }
 
-public entry fun create_proposal( dao_id: address, member: &DoaMemeber, recipient: address, ctx: &mut TxContext) {
+public entry fun create_proposal( dao_id: address, name: std::string::String, description: std::string::String, member: &DoaMemeber, recipient: address, ctx: &mut TxContext) {
     // membership check
     assert!(member.doa_address == dao_id, 0);
     // eligibility check
@@ -145,6 +175,8 @@ public entry fun create_proposal( dao_id: address, member: &DoaMemeber, recipien
         dao: dao_id,
         support: 0,
         not_supporting: 0,
+        name,
+        description,
         exp: ctx.epoch() + 7,
         total: vector::empty<address>(),
     };

@@ -3,6 +3,7 @@ name = "sui_hub_votting_app"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
+published-at = "0x9845458e6e6201ae0ffa9ae2dbce86d771f6febb47e30134cdd1da383b742306"
 
 [dependencies]
 
@@ -18,6 +19,7 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # Override = { local = "../conflicting/version", override = true }
 
 [addresses]
+#test_net
 sui_hub_votting_app = "0x0"
 
 # Named addresses will be accessible in Move as `@name`. They're also exported:
