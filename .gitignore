@@ -1,3 +1,15 @@
-build/*
-suijub_dao/.env
-config
+# Logs
+logs
+*.log
+pnpm-debug.log*
+
+# Misc
+node_modules
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+
+# Arweave
+arweave-keyfile*
